@@ -58,15 +58,24 @@ locals {
 }
 
 data "aws_vpc" "this" {
-  # Use the default VPC or find the VPC by name if specified
-  default = var.vpc_name == "" ? true : false
-  tags    = var.vpc_name != "" ? { Name = var.vpc_name } : {}
+  filter {
+    name   = "tag:Name"
+    values = [var.vpc_name]
+  }
 }
 
-data "aws_subnet_ids" "public" {
-  vpc_id = data.aws_vpc.this.id
-  # Find the public subnets in the VPC
-  tags = var.vpc_name != "" ? { SubnetTier = "public" } : {}
+data "aws_subnets" "public" {
+  filter {
+    name   = "tag:Name"
+    values = var.public_subnet_names
+  }
+}
+
+data "aws_subnets" "private" {
+  filter {
+    name   = "tag:Name"
+    values = var.private_subnet_names
+  }
 }
 
 data "aws_iam_policy_document" "assume_role_policy" {
@@ -177,7 +186,7 @@ resource "aws_ecs_service" "op_scim_bridge" {
   }
 
   network_configuration {
-    subnets          = data.aws_subnet_ids.public.ids
+    subnets          = data.aws_subnets.private.ids
     assign_public_ip = true
     security_groups  = [aws_security_group.service.id]
   }
@@ -190,7 +199,7 @@ resource "aws_ecs_service" "op_scim_bridge" {
 resource "aws_alb" "op_scim_bridge" {
   name               = var.name_prefix == "" ? "op-scim-bridge-alb" : format("%s-%s", local.name_prefix, "alb")
   load_balancer_type = "application"
-  subnets            = data.aws_subnet_ids.public.ids
+  subnets            = data.aws_subnets.public.ids
   security_groups    = [aws_security_group.alb.id]
 
   tags = local.tags
