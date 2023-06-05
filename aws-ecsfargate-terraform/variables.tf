@@ -23,6 +23,16 @@ variable "vpc_name" {
   description = "The name of an existing VPC to use."
 }
 
+variable "public_subnet_names" {
+  type        = list(string)
+  description = "The name of the public subnets to deploy ALB."
+}
+
+variable "private_subnet_names" {
+  type        = list(string)
+  description = "The name of the private subnets to deploy ECS Fargate."
+}
+
 variable "wildcard_cert" {
   type        = bool
   default     = false
